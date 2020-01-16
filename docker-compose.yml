@@ -1,0 +1,22 @@
+version: '3.5'
+
+services:
+
+  queue:
+    container_name: qwant-queue
+    environment:
+      - RABBITMQ_DEFAULT_USER=${APP_QUEUE_USER}
+      - RABBITMQ_DEFAULT_PASS=${APP_QUEUE_PASSWORD}
+    image: rabbitmq:3.7.15-management-alpine
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    restart: always
+
+  php:
+    container_name: qwant-php73
+    build: ./docker/php
+    tty: true
+    restart: always
+    volumes:
+      - .:/library
