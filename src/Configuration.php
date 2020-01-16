@@ -1,11 +1,11 @@
 <?php
 
-namespace common\components\rabbitMq;
+namespace qwant50\rabbitMq;
 
-use common\components\rabbitMq\components\Consumer;
-use common\components\rabbitMq\components\ProducerInterface;
-use common\components\rabbitMq\components\Routing;
-use common\components\rabbitMq\exceptions\InvalidConfigException;
+use qwant50\rabbitMq\components\Consumer;
+use qwant50\rabbitMq\components\ProducerInterface;
+use qwant50\rabbitMq\components\Routing;
+use qwant50\rabbitMq\InvalidConfigException;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
 use yii\base\Component;
@@ -17,14 +17,14 @@ use yii\helpers\ArrayHelper;
  */
 class Configuration extends Component
 {
-    public const CONNECTION_SERVICE_NAME = 'rabbit_mq.connection.%s';
-    public const CONSUMER_SERVICE_NAME = 'rabbit_mq.consumer.%s';
-    public const PRODUCER_SERVICE_NAME = 'rabbit_mq.producer.%s';
-    public const ROUTING_SERVICE_NAME = 'rabbit_mq.routing';
-    public const LOGGER_SERVICE_NAME = 'rabbit_mq.logger';
+    private const CONNECTION_SERVICE_NAME = 'rabbit_mq.connection.%s';
+    private const CONSUMER_SERVICE_NAME = 'rabbit_mq.consumer.%s';
+    private const PRODUCER_SERVICE_NAME = 'rabbit_mq.producer.%s';
+    private const ROUTING_SERVICE_NAME = 'rabbit_mq.routing';
+    private const LOGGER_SERVICE_NAME = 'rabbit_mq.logger';
 
-    public const DEFAULT_CONNECTION_NAME = 'default';
-    public const EXTENSION_CONTROLLER_ALIAS = 'rabbitmq';
+    private const DEFAULT_CONNECTION_NAME = 'default';
+    private const EXTENSION_CONTROLLER_ALIAS = 'rabbitmq';
 
     private const DEFAULTS = [
         'auto_declare' => true,
@@ -132,7 +132,7 @@ class Configuration extends Component
     public function init(): void
     {
         $this->getConfig();
-        (new DependencyInjection())->bootstrap($this);
+        (new DependencyInjection())->registerAll($this);
     }
 
     /**

@@ -11,12 +11,20 @@ use qwant50\rabbitMq\components\{AbstractConnectionFactory,
     Routing,
     RpcServer};
 use qwant50\rabbitMq\commands\RabbitMqController;
-use cqwant50\rabbitMq\exceptions\InvalidConfigException;
+use qwant50\rabbitMq\exceptions\InvalidConfigException;
 use PhpAmqpLib\Connection\AbstractConnection;
-use yii\base\BootstrapInterface;
 
-class DependencyInjection implements BootstrapInterface
+class DependencyInjection
 {
+    private const CONNECTION_SERVICE_NAME = 'rabbit_mq.connection.%s';
+    private const CONSUMER_SERVICE_NAME = 'rabbit_mq.consumer.%s';
+    private const PRODUCER_SERVICE_NAME = 'rabbit_mq.producer.%s';
+    private const ROUTING_SERVICE_NAME = 'rabbit_mq.routing';
+    private const LOGGER_SERVICE_NAME = 'rabbit_mq.logger';
+
+    private const DEFAULT_CONNECTION_NAME = 'default';
+    private const EXTENSION_CONTROLLER_ALIAS = 'rabbitmq';
+
     /**
      * @var $logger Logger
      */
@@ -27,7 +35,7 @@ class DependencyInjection implements BootstrapInterface
      * Configuration auto-loading
      * @param Configuration $config
      */
-    public function bootstrap($config)
+    public function registerAll($config): void
     {
         $this->registerLogger($config);
         $this->registerConnections($config);
@@ -43,7 +51,7 @@ class DependencyInjection implements BootstrapInterface
      */
     private function registerLogger($config)
     {
-        \Yii::$container->setSingleton(Configuration::LOGGER_SERVICE_NAME, ['class' => Logger::class, 'options' => $config->logger]);
+        \Yii::$container->setSingleton(self::LOGGER_SERVICE_NAME, ['class' => Logger::class, 'options' => $config->logger]);
     }
 
     /**
@@ -53,7 +61,7 @@ class DependencyInjection implements BootstrapInterface
     protected function registerConnections(Configuration $config)
     {
         foreach ($config->connections as $options) {
-            $serviceAlias = sprintf(Configuration::CONNECTION_SERVICE_NAME, $options['name']);
+            $serviceAlias = sprintf(self::CONNECTION_SERVICE_NAME, $options['name']);
             \Yii::$container->setSingleton($serviceAlias, function () use ($options) {
                 $factory = new AbstractConnectionFactory($options['type'], $options);
                 return $factory->createConnection();
@@ -67,7 +75,7 @@ class DependencyInjection implements BootstrapInterface
      */
     protected function registerRouting(Configuration $config)
     {
-        \Yii::$container->setSingleton(Configuration::ROUTING_SERVICE_NAME, function ($container, $params) use ($config) {
+        \Yii::$container->setSingleton(self::ROUTING_SERVICE_NAME, function ($container, $params) use ($config) {
             $routing = new Routing($params['conn']);
             \Yii::$container->invoke([$routing, 'setQueues'], [$config->queues]);
             \Yii::$container->invoke([$routing, 'setExchanges'], [$config->exchanges]);
@@ -85,20 +93,20 @@ class DependencyInjection implements BootstrapInterface
     {
         $autoDeclare = $config->auto_declare;
         foreach ($config->producers as $options) {
-            $serviceAlias = sprintf(Configuration::PRODUCER_SERVICE_NAME, $options['name']);
+            $serviceAlias = sprintf(self::PRODUCER_SERVICE_NAME, $options['name']);
             \Yii::$container->setSingleton($serviceAlias, function () use ($options, $autoDeclare) {
                 /**
                  * @var $connection AbstractConnection
                  */
-                $connection = \Yii::$container->get(sprintf(Configuration::CONNECTION_SERVICE_NAME, $options['connection']));
+                $connection = \Yii::$container->get(sprintf(self::CONNECTION_SERVICE_NAME, $options['connection']));
                 /**
                  * @var $routing Routing
                  */
-                $routing = \Yii::$container->get(Configuration::ROUTING_SERVICE_NAME, ['conn' => $connection]);
+                $routing = \Yii::$container->get(self::ROUTING_SERVICE_NAME, ['conn' => $connection]);
                 /**
                  * @var $logger Logger
                  */
-                $logger = \Yii::$container->get(Configuration::LOGGER_SERVICE_NAME);
+                $logger = \Yii::$container->get(self::LOGGER_SERVICE_NAME);
                 if ($options['type'] === 'rpc') {
                     $producer = new RpcClient($connection, $routing, $logger, $autoDeclare);
                 } else {
@@ -124,20 +132,20 @@ class DependencyInjection implements BootstrapInterface
     {
         $autoDeclare = $config->auto_declare;
         foreach ($config->consumers as $options) {
-            $serviceAlias = sprintf(Configuration::CONSUMER_SERVICE_NAME, $options['name']);
+            $serviceAlias = sprintf(self::CONSUMER_SERVICE_NAME, $options['name']);
             \Yii::$container->setSingleton($serviceAlias, function () use ($options, $autoDeclare) {
                 /**
                  * @var $connection AbstractConnection
                  */
-                $connection = \Yii::$container->get(sprintf(Configuration::CONNECTION_SERVICE_NAME, $options['connection']));
+                $connection = \Yii::$container->get(sprintf(self::CONNECTION_SERVICE_NAME, $options['connection']));
                 /**
                  * @var $routing Routing
                  */
-                $routing = \Yii::$container->get(Configuration::ROUTING_SERVICE_NAME, ['conn' => $connection]);
+                $routing = \Yii::$container->get(self::ROUTING_SERVICE_NAME, ['conn' => $connection]);
                 /**
                  * @var $logger Logger
                  */
-                $logger = \Yii::$container->get(Configuration::LOGGER_SERVICE_NAME);
+                $logger = \Yii::$container->get(self::LOGGER_SERVICE_NAME);
                 if ($options['type'] === 'rpc') {
                     $consumer = new RpcServer($connection, $routing, $logger, $autoDeclare);
                 } else {
@@ -189,6 +197,6 @@ class DependencyInjection implements BootstrapInterface
      */
     private function addControllers(Configuration $config)
     {
-        \Yii::$app->controllerMap[Configuration::EXTENSION_CONTROLLER_ALIAS] = RabbitMqController::class;
+        \Yii::$app->controllerMap[self::EXTENSION_CONTROLLER_ALIAS] = RabbitMqController::class;
     }
 }

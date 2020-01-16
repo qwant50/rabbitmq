@@ -8,6 +8,13 @@ class RabbitMqComponent extends Component
 {
     private $areDependenciesRegistered = false;
 
+    private $config;
+
+    public function init()
+    {
+        $this->config = new Configuration();
+    }
+
     public function publish()
     {
 
